@@ -13,54 +13,103 @@ class MissingValueProcessor:
         return list(columns) if columns else list(self.dataset.keys())
 
     def isna(self, columns: Set[str] = None) -> Dict[str, List[Any]]:
-        """
-        Retorna um novo dataset contendo apenas as linhas que possuem
-        pelo menos um valor nulo (None) em uma das colunas especificadas.
+        target_columns = self._get_target_columns(columns)
 
-        Args:
-            columns (Set[str]): Um conjunto de nomes de colunas a serem verificadas.
-                               Se vazio, todas as colunas são consideradas.
+        if not target_columns or not self.dataset:
+            return {}
 
-        Returns:
-            Dict[str, List[Any]]: Um dicionário representando as linhas com valores nulos.
-        """
-        pass
+        num_rows = len(self.dataset[target_columns[0]])
+        result_dataset = {col: [] for col in self.dataset.keys()}
+
+        for i in range(num_rows):
+            if any(self.dataset[col][i] is None for col in target_columns):
+                for col in self.dataset.keys():
+                    result_dataset[col].append(self.dataset[col][i])
+
+        return result_dataset
 
     def notna(self, columns: Set[str] = None) -> Dict[str, List[Any]]:
-        """
-        Retorna um novo dataset contendo apenas as linhas que não possuem
-        valores nulos (None) em nenhuma das colunas especificadas.
+        target_columns = self._get_target_columns(columns)
 
-        Args:
-            columns (Set[str]): Um conjunto de nomes de colunas a serem verificadas.
-                               Se vazio, todas as colunas são consideradas.
+        if not target_columns or not self.dataset:
+            return {}
 
-        Returns:
-            Dict[str, List[Any]]: Um dicionário representando as linhas sem valores nulos.
-        """
-        pass
+        num_rows = len(self.dataset[target_columns[0]])
+        result_dataset = {col: [] for col in self.dataset.keys()}
+
+        for i in range(num_rows):
+            if all(self.dataset[col][i] is not None for col in target_columns):
+                for col in self.dataset.keys():
+                    result_dataset[col].append(self.dataset[col][i])
+
+        return result_dataset
 
     def fillna(self, columns: Set[str] = None, method: str = 'mean', default_value: Any = 0):
-        """
-        Preenche valores nulos (None) nas colunas especificadas usando um método.
-        Modifica o dataset da classe.
+        target_columns = self._get_target_columns(columns)
+        if not target_columns or not self.dataset:
+            return
 
-        Args:
-            columns (Set[str]): Colunas onde o preenchimento será aplicado. Se vazio, aplica a todas.
-            method (str): 'mean', 'median', 'mode', ou 'default_value'.
-            default_value (Any): Valor para usar com o método 'default_value'.
-        """
-        pass
+        for col in target_columns:
+            fill_value = None
+            if method == 'mean':
+                clean_values = [v for v in self.dataset[col] if v is not None]
+                if clean_values:
+                    stats_clean = Statistics({col: clean_values})
+                    fill_value = stats_clean.mean(col)
+                else:
+                    fill_value = default_value
+            elif method == 'median':
+                clean_values = [v for v in self.dataset[col] if v is not None]
+                if clean_values:
+                    stats_clean = Statistics({col: clean_values})
+                    fill_value = stats_clean.median(col)
+                else:
+                    fill_value = default_value
+            elif method == 'mode':
+                clean_values = [v for v in self.dataset[col] if v is not None]
+                if clean_values:
+                    stats_clean = Statistics({col: clean_values})
+                    mode_result = stats_clean.mode(col)
+                    if mode_result:
+                        fill_value = mode_result[0]
+                    else:
+                        fill_value = default_value
+                else:
+                    fill_value = default_value
+            elif method == 'default_value':
+                fill_value = default_value
+            else:
+                raise ValueError(f"Método '{method}' não suportado.")
+
+            for i in range(len(self.dataset[col])):
+                if self.dataset[col][i] is None:
+                    self.dataset[col][i] = fill_value
 
     def dropna(self, columns: Set[str] = None):
-        """
-        Remove as linhas que contêm valores nulos (None) nas colunas especificadas.
-        Modifica o dataset da classe.
+        target_columns = self._get_target_columns(columns)
 
-        Args:
-            columns (Set[str]): Colunas a serem verificadas para valores nulos. Se vazio, todas as colunas são verificadas.
-        """
-        pass
+        if not target_columns or not self.dataset:
+            return
+
+        valid_rows_indices = []
+        num_rows = len(self.dataset[target_columns[0]])
+
+        for i in range(num_rows):
+            is_valid = True
+            for col in target_columns:
+                if self.dataset[col][i] is None:
+                    is_valid = False
+                    break
+            if is_valid:
+                valid_rows_indices.append(i)
+
+        new_dataset = {col: [] for col in self.dataset.keys()}
+        for i in valid_rows_indices:
+            for col in self.dataset.keys():
+                new_dataset[col].append(self.dataset[col][i])
+
+        self.dataset.clear()
+        self.dataset.update(new_dataset)
 
 
 class Scaler:
