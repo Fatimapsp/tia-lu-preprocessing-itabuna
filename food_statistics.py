@@ -1,232 +1,158 @@
 class Statistics:
-    """
-    Uma classe para realizar cálculos estatísticos em um conjunto de dados.
 
-    Atributos
-    ----------
-    dataset : dict[str, list]
-        O conjunto de dados, estruturado como um dicionário onde as chaves
-        são os nomes das colunas e os valores são listas com os dados.
-    """
     def __init__(self, dataset):
-        """
-        Inicializa o objeto Statistics.
+        if not isinstance(dataset, dict):
+            raise TypeError("O dataset deve ser um dicionário.")
 
-        Parâmetros
-        ----------
-        dataset : dict[str, list]
-            O conjunto de dados, onde as chaves representam os nomes das
-            colunas e os valores são as listas de dados correspondentes.
-        """
+        for _, values in dataset.items():
+            if not isinstance(values, list):
+                raise TypeError("Todos os valores no dicionário do dataset devem ser listas.")
+
+        lengths = [len(values) for values in dataset.values()]
+        if len(set(lengths)) != 1:
+            raise ValueError("Todas as colunas no dataset devem ter o mesmo tamanho.")
+
         self.dataset = dataset
 
+    def _get_column_data(self, column):
+        if column not in self.dataset:
+            raise KeyError(f"A coluna '{column}' não existe no dataset.")
+        return self.dataset[column]
+
     def mean(self, column):
-        """
-        Calcula a média aritmética de uma coluna.
+        valores = self._get_column_data(column)
 
-        Fórmula:
-        $$ \mu = \frac{1}{N} \sum_{i=1}^{N} x_i $$
+        if not valores:
+            return 0.0
 
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
-
-        Retorno
-        -------
-        float
-            A média dos valores na coluna.
-        """
-        pass
+        media_aritmetica = sum(valores) / len(valores)
+        return float(media_aritmetica)
 
     def median(self, column):
-        """
-        Calcula a mediana de uma coluna.
+        valores = self._get_column_data(column)
 
-        A mediana é o valor central de um conjunto de dados ordenado.
+        if not valores:
+            return 0.0
 
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
+        valores_ordenados = sorted(valores)
 
-        Retorno
-        -------
-        float
-            O valor da mediana da coluna.
-        """
-        pass
+        n = len(valores_ordenados)
+        if n % 2 == 0:
+            i = n // 2 - 1
+            mediana = (valores_ordenados[i] + valores_ordenados[i + 1]) / 2
+        else:
+            i = n // 2
+            mediana = valores_ordenados[i]
+
+        return float(mediana)
 
     def mode(self, column):
-        """
-        Encontra a moda (ou modas) de uma coluna.
+        frequencias = self.absolute_frequency(column)
 
-        A moda é o valor que aparece com mais frequência no conjunto de dados.
+        if not frequencias:
+            return []
 
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
+        maior_frequencia = max(frequencias.values())
 
-        Retorno
-        -------
-        list
-            Uma lista contendo o(s) valor(es) da moda.
-        """
-        pass
+        moda = [item for item, freq in frequencias.items() if freq == maior_frequencia]
+
+        return moda
 
     def stdev(self, column):
-        """
-        Calcula o desvio padrão populacional de uma coluna.
+        variancia = self.variance(column)
 
-        Fórmula:
-        $$ \sigma = \sqrt{\frac{\sum_{i=1}^{N} (x_i - \mu)^2}{N}} $$
+        desvio_padrao = variancia ** 0.5
 
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
-
-        Retorno
-        -------
-        float
-            O desvio padrão dos valores na coluna.
-        """
-        pass
+        return float(desvio_padrao)
 
     def variance(self, column):
-        """
-        Calcula a variância populacional de uma coluna.
+        valores = self._get_column_data(column)
 
-        Fórmula:
-        $$ \sigma^2 = \frac{\sum_{i=1}^{N} (x_i - \mu)^2}{N} $$
+        if not valores:
+            return 0.0
 
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
+        media = self.mean(column)
 
-        Retorno
-        -------
-        float
-            A variância dos valores na coluna.
-        """
-        pass
+        desvios_quadrados = ((item - media) ** 2 for item in valores)
+
+        variancia = sum(desvios_quadrados) / len(valores)
+
+        return float(variancia)
 
     def covariance(self, column_a, column_b):
-        """
-        Calcula a covariância entre duas colunas.
+        valores_a = self._get_column_data(column_a)
+        valores_b = self._get_column_data(column_b)
 
-        Fórmula:
-        $$ \text{cov}(X, Y) = \frac{\sum_{i=1}^{N} (x_i - \mu_x)(y_i - \mu_y)}{N} $$
+        if len(valores_a) != len(valores_b) or len(valores_a) < 2:
+            return 0.0
 
-        Parâmetros
-        ----------
-        column_a : str
-            O nome da primeira coluna (X).
-        column_b : str
-            O nome da segunda coluna (Y).
+        media_a = self.mean(column_a)
+        media_b = self.mean(column_b)
 
-        Retorno
-        -------
-        float
-            O valor da covariância entre as duas colunas.
-        """
-        pass
+        soma_produto_desvios = sum((x - media_a) * (y - media_b) for x, y in zip(valores_a, valores_b))
+
+        return float(soma_produto_desvios / len(valores_a))
 
     def itemset(self, column):
-        """
-        Retorna o conjunto de itens únicos em uma coluna.
-
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
-
-        Retorno
-        -------
-        set
-            Um conjunto com os valores únicos da coluna.
-        """
-        pass
+        valores = self._get_column_data(column)
+        return set(valores)
 
     def absolute_frequency(self, column):
-        """
-        Calcula a frequência absoluta de cada item em uma coluna.
+        valores = self._get_column_data(column)
 
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
+        if not valores:
+            return {}
 
-        Retorno
-        -------
-        dict
-            Um dicionário onde as chaves são os itens e os valores são
-            suas contagens (frequência absoluta).
-        """
-        pass
+        frequencias = {item: valores.count(item) for item in self.itemset(column)}
+
+        return frequencias
 
     def relative_frequency(self, column):
-        """
-        Calcula a frequência relativa de cada item em uma coluna.
+        frequencias_absolutas = self.absolute_frequency(column)
 
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
+        if not frequencias_absolutas:
+            return {}
 
-        Retorno
-        -------
-        dict
-            Um dicionário onde as chaves são os itens e os valores são
-            suas proporções (frequência relativa).
-        """
-        pass
+        total_amostras = len(self.dataset[column])
+
+        frequencias_relativas = {item: freq / total_amostras for item, freq in frequencias_absolutas.items()}
+
+        return frequencias_relativas
 
     def cumulative_frequency(self, column, frequency_method='absolute'):
-        """
-        Calcula a frequência acumulada (absoluta ou relativa) de uma coluna.
+        if frequency_method not in ['absolute', 'relative']:
+            raise ValueError("O 'frequency_method' deve ser 'absolute' ou 'relative'.")
 
-        A frequência é calculada sobre os itens ordenados.
+        valores = self._get_column_data(column)
 
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
-        frequency_method : str, opcional
-            O método a ser usado: 'absolute' para contagem acumulada ou
-            'relative' para proporção acumulada (padrão é 'absolute').
+        if not valores:
+            return {}
 
-        Retorno
-        -------
-        dict
-            Um dicionário ordenado com os itens como chaves e suas
-            frequências acumuladas como valores.
-        """
-        pass
+        if frequency_method == 'absolute':
+            frequencias = self.absolute_frequency(column)
+        else:
+            frequencias = self.relative_frequency(column)
+
+        frequencia_acumulada = {}
+        acumulado = 0
+
+        for item in sorted(frequencias.keys()):
+            acumulado += frequencias[item]
+            frequencia_acumulada[item] = acumulado
+
+        return frequencia_acumulada
 
     def conditional_probability(self, column, value1, value2):
-        """
-        Calcula a probabilidade condicional P(X_i = value1 | X_{i-1} = value2).
+        valores = self._get_column_data(column)
 
-        Este método trata a coluna como uma sequência e calcula a probabilidade
-        de encontrar `value1` imediatamente após `value2`.
+        if len(valores) < 2:
+            return 0.0
 
-        Fórmula: P(A|B) = Contagem de sequências (B, A) / Contagem total de B
+        total_ocorrencias_value2 = valores.count(value2)
 
-        Parâmetros
-        ----------
-        column : str
-            O nome da coluna (chave do dicionário do dataset).
-        value1 : any
-            O valor do evento consequente (A).
-        value2 : any
-            O valor do evento condicionante (B).
+        sequencia = sum(1 for i in range(len(valores) - 1) if valores[i] == value2 and valores[i + 1] == value1)
 
-        Retorno
-        -------
-        float
-            A probabilidade condicional, um valor entre 0 e 1.
-        """
-        pass
+        if total_ocorrencias_value2 > 0:
+            return float(sequencia / total_ocorrencias_value2)
+
+        return 0.0
