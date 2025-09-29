@@ -9,7 +9,7 @@ class Statistics:
                 raise TypeError("Todos os valores no dicionário do dataset devem ser listas.")
 
         lengths = [len(values) for values in dataset.values()]
-        if len(set(lengths)) != 1:
+        if len(set(lengths)) > 1:
             raise ValueError("Todas as colunas no dataset devem ter o mesmo tamanho.")
 
         self.dataset = dataset

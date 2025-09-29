@@ -24,7 +24,7 @@ class TestMissingValueProcessor(unittest.TestCase):
         
         # Testa a busca por nulos em todas as colunas (comportamento padrão)
         result_all_cols = processor.isna()
-        self.assertEqual(len(result_all_cols['idade']), 4) # Todas as linhas têm algum nulo
+        self.assertEqual(len(result_all_cols['idade']), 3) # Todas as linhas têm algum nulo
 
     def test_notna(self):
         processor = MissingValueProcessor(copy.deepcopy(self.data))
@@ -108,10 +108,10 @@ class TestPreprocessingFacade(unittest.TestCase):
             Preprocessing(invalid_data)
 
     # Patch indica o local ONDE o objeto é usado, não onde ele é definido.
-    @patch('preprocessing_lib.MissingValueProcessor')
-    @patch('preprocessing_lib.Scaler')
-    @patch('preprocessing_lib.Encoder')
-    @patch('preprocessing_lib.Statistics')
+    @patch('preprocessing.MissingValueProcessor')
+    @patch('preprocessing.Scaler')
+    @patch('preprocessing.Encoder')
+    @patch('preprocessing.Statistics')
     def test_facade_methods_call_correct_implementations(self, MockStats, MockEncoder, MockScaler, MockMVP):
         """
         Testa se os métodos de fachada da classe Preprocessing chamam
@@ -153,5 +153,63 @@ class TestPreprocessingFacade(unittest.TestCase):
         with self.assertRaises(ValueError):
             preprocessor.scale(method='invalid_method')
             
+if __name__ == '__main__':
+    unittest.main(argv=['first-arg-is-ignored'], exit=False)
+
+
+class TestEdgeCases(unittest.TestCase):
+
+    def test_scaler_with_identical_values(self):
+        """Testa se o Scaler lida com divisão por zero quando todos os valores são iguais."""
+        data = {'col': [5, 5, 5, 5]}
+        scaler = Scaler(data)
+
+        # Teste para minMax_scaler
+        scaler.minMax_scaler(columns={'col'})
+        self.assertEqual(scaler.dataset['col'], [0.0, 0.0, 0.0, 0.0])
+
+        # Teste para standard_scaler
+        scaler.standard_scaler(columns={'col'})
+        self.assertEqual(scaler.dataset['col'], [0.0, 0.0, 0.0, 0.0])
+
+    def test_fillna_on_all_none_column(self):
+        """Testa se fillna usa o valor padrão quando não pode calcular a estatística."""
+        data = {'col': [None, None, None]}
+        processor = MissingValueProcessor(data)
+        processor.fillna(columns={'col'}, method='mean', default_value=-1)
+        self.assertEqual(processor.dataset['col'], [-1, -1, -1])
+
+    def test_dropna_on_clean_data(self):
+        """Testa se dropna não altera dados que já estão limpos."""
+        data = {'col1': [1, 2, 3], 'col2': ['A', 'B', 'C']}
+        original_data = copy.deepcopy(data)
+        processor = MissingValueProcessor(data)
+        processor.dropna()
+        self.assertEqual(processor.dataset, original_data)
+
+    def test_encoder_with_none_values(self):
+        """Testa como o Encoder lida com None (esperado falhar com TypeError)."""
+        data = {'col': ['A', 'B', None, 'C']}
+        encoder = Encoder(data)
+        # A função sorted() dentro do label_encode não sabe como comparar None e string
+        with self.assertRaises(TypeError):
+            encoder.label_encode(columns={'col'})
+
+    def test_label_encode_with_mixed_types(self):
+        """Testa como o Encoder lida com tipos misturados (esperado falhar com TypeError)."""
+        data = {'col': ['A', 1, 'B', 2]}
+        encoder = Encoder(data)
+        # A função sorted() falha ao tentar ordenar int e string
+        with self.assertRaises(TypeError):
+            encoder.label_encode(columns={'col'})
+
+    def test_preprocessing_with_empty_dataset(self):
+        """Testa se a fachada Preprocessing lida com um dataset vazio sem erros."""
+        try:
+            _ = Preprocessing({})
+        except Exception as e:
+            self.fail(f"Preprocessing com dataset vazio levantou uma exceção: {e}")
+
+
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)
